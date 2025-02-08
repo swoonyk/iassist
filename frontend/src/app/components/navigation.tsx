@@ -20,7 +20,7 @@ export const Navigation = () => {
                 <Link href="/" className="font-semibold text-lg">
                     iAssist
                 </Link>
-                <nav className="flex gap-6">
+                <nav className="flex gap-8">
                     {navItems.map((item) => (
                         <Link
                             key={item.href}
