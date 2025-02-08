@@ -1,10 +1,77 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { processMessages } from "../lib/message-cutter";
+
+interface Message {
+  time: string;
+  message: string;
+}
 
 export function HomePage() {
   const [isRecording, setIsRecording] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [environmentMessages, setEnvironmentMessages] = useState<string[]>([]);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+
+  useEffect(() => {
+    fetch('/mock_data/info.json')
+      .then(response => response.json())
+      .then(data => {
+        if (data.environment) {
+          const messages = processMessages(data.environment);
+          setEnvironmentMessages(messages);
+        }
+      })
+      .catch(error => console.error('Error loading messages:', error));
+  }, []);
+
+  const addMessage = (newMessage: Message) => {
+    if (isRecording) {
+      setMessages(prevMessages => [newMessage, ...prevMessages]);
+    }
+  };
+
+  const handleNewData = (jsonData: string) => {
+    try {
+      const data = JSON.parse(jsonData);
+      if (data.time && data.message) {
+        addMessage({
+          time: data.time,
+          message: data.message
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing JSON:', error);
+    }
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isRecording && environmentMessages.length > 0) {
+      interval = setInterval(() => {
+        const message = environmentMessages[currentMessageIndex];
+        
+        const testJson = JSON.stringify({
+          time: new Date().toLocaleTimeString(),
+          message: message
+        });
+        handleNewData(testJson);
+        
+        setCurrentMessageIndex(prevIndex => 
+          prevIndex + 1 >= environmentMessages.length ? 0 : prevIndex + 1
+        );
+      }, 3000); 
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isRecording, environmentMessages, currentMessageIndex]);
 
   return (
     <main className="flex flex-col items-center space-y-8 w-full max-w-5xl mx-auto">
@@ -23,18 +90,6 @@ export function HomePage() {
             <p className="text-muted-foreground" role="status" aria-live="polite">
               Camera feed will appear here
             </p>
-          </div>
-
-          <div className="absolute bottom-4 right-4 flex gap-2">
-            <Button 
-              size="sm" 
-              variant="secondary"
-              title="Toggle fullscreen"
-              aria-label="Toggle fullscreen view"
-            >
-              <span className="sr-only">Fullscreen</span>
-              □
-            </Button>
           </div>
         </article>
 
@@ -56,48 +111,7 @@ export function HomePage() {
             aria-label="Detection captions"
             style={{ scrollBehavior: 'smooth' }}
           >
-            {[
-              {
-                time: "12:01 PM",
-                message: "Warning: Stairs ahead, approximately 5 steps down. Handrail available on the right side."
-              },
-              {
-                time: "12:00 PM",
-                message: "Door detected 3 meters ahead. Push handle on the left side. The door opens outward."
-              },
-              {
-                time: "11:59 AM",
-                message: "Person approaching from the right, approximately 2 meters away. They appear to be waiting to pass."
-              },
-              {
-                time: "11:58 AM",
-                message: "Clear pathway ahead. Corridor width is approximately 2 meters. Wall guidance available on both sides."
-              },
-              {
-                time: "11:57 AM",
-                message: "Crosswalk signal is green. No vehicles detected. Safe to cross the street."
-              },
-              {
-                time: "11:56 AM",
-                message: "Restaurant entrance on the left. Automatic sliding doors. No steps detected."
-              },
-              {
-                time: "11:55 AM",
-                message: "Bench detected 1 meter to your right. Approximately 1.5 meters long."
-              },
-              {
-                time: "11:54 AM",
-                message: "Elevator buttons: Ground floor highlighted. Up and down arrows available."
-              },
-              {
-                time: "11:53 AM",
-                message: "Wide open space ahead. Indoor lobby area. Multiple seating areas detected."
-              },
-              {
-                time: "11:52 AM",
-                message: "Information desk 5 meters ahead. Staff member present."
-              }
-            ].map((caption, index) => (
+            {messages.map((caption, index) => (
               <div 
                 key={index} 
                 className="flex items-start gap-2 p-2 rounded hover:bg-muted-foreground/5 transition-colors"
