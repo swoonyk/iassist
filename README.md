@@ -14,7 +14,7 @@ traditional navigation aids like guide dogs and specialized devices can be expen
 ### core ai components
 - **object detection**: [utralytics yolo11](https://docs.ultralytics.com/models/yolo11/)
 - **audio feedback (TTS)**: [hugging face `Kokoro-82M`](https://huggingface.co/hexgrad/Kokoro-82M)
-- **speech recognition (STT)**: [groq API](https://api.groq.com/openai/v1/audio/translations)
+- **speech recognition (STT)**: [groq API](https://api.groq.com/openai/v1/audio/translations) [hugging face `whisper-large-v3-turbo`]
 - **ai framework**: [ollama](https://ollama.com/)
 
 ## 🧠 technical architecture
