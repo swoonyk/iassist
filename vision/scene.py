@@ -5,6 +5,23 @@ class Scene:
     def __init__(self):
         self.model = YOLO("yolov8n.pt")
         self.tracked_objects = {}
+        self.memory_buffer = deque(maxlen=5)  # Keep last 5 observations
+        self.last_seen = time.time()
+        load_dotenv()
+
+    def _format_memory(self) -> str:
+        """Format memory buffer into context string"""
+        if not self.memory_buffer:
+            return "No previous observations."
+        
+        memory_entries = []
+        current_time = time.time()
+        
+        for timestamp, summary in self.memory_buffer:
+            time_ago = round(current_time - timestamp, 1)
+            memory_entries.append(f"[{time_ago}s ago]: {summary}")
+            
+        return "\n".join(memory_entries)
     
     def _get_position(self, x: float, y: float) -> str:
         """Convert coordinates to position description"""

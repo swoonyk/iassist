@@ -1,6 +1,7 @@
 from .imports import *
 from .scene import Scene
 from .priority_list import NavigationQueue
+from .tts import TTSProcessor
 
 def main():
     frame_size = (640, 480)  # Smaller frame size for faster processing
@@ -29,6 +30,11 @@ def main():
     
     frame_count = 0
     last_analysis = time.time()
+
+    scene = Scene()
+    nav_queue = NavigationQueue()
+    tts_processor = TTSProcessor()
+    tts_processor.start_processing_thread()
 
     try:
         last_frame_time = time.time()
@@ -65,11 +71,17 @@ def main():
             if current_time - last_analysis >= analysis_interval:
                 if len(analysis_buffer) > 0:
                     summary = scene.llm_summarize(analysis_buffer)
-                    print("[Scene]", summary)
+                    #print("[Scene]", summary)
                     response, tag = summary
                     priority_queue_item = scene._format_for_priority_queue(response, tag) # TURNED TO JSON
                     nav_queue = NavigationQueue()
                     nav_queue.add_json_item(priority_queue_item)
+
+                    if nav_queue.queue:
+                        message, priority = nav_queue.queue[0]
+                        tts_processor.add_message(message, priority)
+                        nav_queue.queue.pop(0)
+                        
                     last_analysis = current_time
                     analysis_buffer.clear()
             
