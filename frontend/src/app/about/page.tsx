@@ -142,7 +142,7 @@ export default function AboutPage() {
                   </Link>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-300 text-center leading-relaxed">
-                  CS at Barnard College of Columbia University, interested in artificial intelligenceç and interdisciplinary research
+                  CS at Barnard College of Columbia University, interested in artificial intelligence and interdisciplinary research
                 </p>
               </div>
             </BackgroundGradient>

@@ -9,7 +9,6 @@ const CameraStream = dynamic(() => import('./CameraStream').then(mod => mod.Came
   loading: () => <p>Loading camera...</p>
 })
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 
 interface Message {
   time: string;
