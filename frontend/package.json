@@ -1,27 +1,31 @@
 {
   "name": "devfest2025",
   "version": "0.1.0",
+  "engines": {
+    "node": "20.11.0"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "python-server": "cd ../server && source ../.iassist-venv/bin/activate && python3 server.py",
+    "dev:all": "concurrently \"npm run dev\" \"npm run python-server\""
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.6",
     "@radix-ui/react-scroll-area": "^1.2.3",
     "@radix-ui/react-slot": "^1.1.2",
-    "@types/leaflet": "^1.9.16",
     "@types/maplibre-gl": "^1.13.2",
     "@types/plotly.js": "^2.35.2",
     "chart.js": "^4.4.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "leaflet": "^1.9.4",
     "lucide-react": "^0.475.0",
     "map": "^1.0.1",
     "maplibre-gl": "^5.1.0",
+    "million": "^3.1.11",
     "next": "15.1.6",
     "next-themes": "^0.4.4",
     "plotly.js-dist-min": "^3.0.0",
@@ -31,6 +35,7 @@
     "react-icons": "^5.4.0",
     "react-leaflet": "^5.0.0",
     "react-plotly.js": "^2.6.0",
+    "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7"
   },
@@ -39,6 +44,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/socket.io-client": "^1.4.36",
+    "concurrently": "^9.1.2",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
