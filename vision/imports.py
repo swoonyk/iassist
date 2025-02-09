@@ -5,6 +5,7 @@ from collections import defaultdict
 from ultralytics import YOLO
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple
-import pyttsx3
 import requests
 import ollama
+from collections import deque
+from ultralytics.utils.plotting import Annotator, colors
