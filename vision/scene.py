@@ -127,5 +127,83 @@ class Scene:
             else:
                 for pos in positions[obj_type]:
                     summary_parts.append(f"{obj_type} on {pos}")
-                    
         return "[LOW] " + ", ".join(summary_parts) if summary_parts else "[LOW] Path clear"
+    
+    def find_tag(self, response: str) -> str:
+        """Find and return the highest-priority tag in the response."""
+        priority = ["[EMERGENCY]", "[HIGH]", "[LOW]"]  # Highest to lowest priority
+        
+        for tag in priority:
+            if re.search(re.escape(tag), response):  # Direct search instead of list
+                return tag
+
+        return "[LOW]"  # Default to lowest priority
+    
+    def llm_summarize(self, analysis_buffer) -> str:
+        if not analysis_buffer:
+            return "[LOW] No data available"
+            
+        scene_summary = self.summarize_scene(analysis_buffer)
+        memory_context = self._format_memory()
+
+        context = {
+            "previous_observations": memory_context,
+            "current_scene": scene_summary
+        }
+
+        prompt = (
+            f'''You are iAssist, a virtual assistant helping navigate surroundings.\n'''
+            f'''Previous observations:\n{context["previous_observations"]}\n'''
+            f'''Current scene: {context["current_scene"]}\n'''
+            f'''Provide a concise (1-3 sentences) summary comparing current and previous scenes.\n'''
+            f'''Include position-based guidance only if objects pose potential risks.\n'''
+            f'''Use appropriate tags:\n'''
+            f'''[EMERGENCY] - Immediate danger\n'''
+            f'''[HIGH] - Caution needed\n'''
+            f'''[LOW] - Normal situation\n'''
+        )
+        
+
+        client = Groq(
+            api_key=os.environ.get("GROQ_API_KEY"),
+        )
+
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    'role': 'user',
+                    'content': prompt
+                }
+            ],
+            model="llama-3.2-3b-preview"
+        )
+
+        try:
+            response = chat_completion.choices[0].message.content.strip()
+            tag = self.find_tag(response)
+                
+            # Store in memory buffer
+            self.memory_buffer.append((time.time(), scene_summary))
+            
+            return response, tag
+        except Exception as e:
+            print(f"[LLM] Error: {e}")
+            return "[LOW] Path is clear"
+    
+    def _format_for_priority_queue(self, response: str, tag: str) -> Tuple[str, int]:
+        priority_map = {
+            "[EMERGENCY]": 3,  # Urgent
+            "[HIGH]": 2,      # Important
+            "[LOW]": 1        # Info
+        }
+        
+        # Clean up the response by removing tags
+        clean_response = response
+        for t in ["[EMERGENCY]", "[HIGH]", "[LOW]"]:
+            clean_response = clean_response.replace(t, "").strip()
+        
+        # Extract first sentence for conciseness
+        first_sentence = clean_response.split('.')[0].strip()
+        
+        # Return format matching NavigationQueue's expected input
+        return (first_sentence, priority_map.get(tag, 1))
