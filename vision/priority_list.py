@@ -1,6 +1,7 @@
 import numpy as np
 from collections import deque
 import time
+from .imports import *
 
 navigation_data = [
     "A person is walking towards you with a briefcase",
@@ -27,16 +28,24 @@ priorities = np.random.choice([3, 2, 1], size=len(navigation_data),
 navigation_priorities = dict(zip(navigation_data, priorities))
 
 class NavigationQueue:
-    def __init__(self, data_dict, initial_size=3):
+    def __init__(self, initial_size=3):
         self.queue = []  # Using list instead of deque for more control
-        self.data = list(data_dict.items())
-        self.current_index = 0  # Start from beginning
+        self.current_index = 0
         self.interrupted_item = None
         self.interrupted = False
+        self.data = []  # Will store JSON items
 
-        # Initialize with first 3 items
-        for i in range(min(initial_size, len(self.data))):
-            self.add_next_item()
+    def add_json_item(self, json_item: Tuple[str, int]):
+        """Add a new JSON formatted item to the data list"""
+        message, priority = json_item
+        self.data.append((message, priority))
+        
+        # If this is one of the first items, add it to queue immediately
+        if len(self.queue) < 3:
+            self.insert_with_priority((message, priority))
+        # Or if it's high priority, process it
+        elif priority >= 2:
+            self.insert_with_priority((message, priority))
 
     def sort_queue(self):
         # Sort by priority (highest first)
@@ -45,17 +54,8 @@ class NavigationQueue:
         if len(self.queue) > 3:
             self.queue = [item for item in self.queue if item[1] > 1][:3]
 
-    def add_next_item(self):
-        if self.current_index < len(self.data):
-            next_item = self.data[self.current_index]
-            self.current_index += 1
-            if next_item[1] >= 2 or len(self.queue) < 3:
-                self.insert_with_priority(next_item)
-            return True
-        return False
-
     def insert_with_priority(self, item):
-        scenario, priority = item
+        message, priority = item
         if priority == 3:
             # Interrupt current output and process immediately
             self.interrupted = True
@@ -122,13 +122,15 @@ class NavigationQueue:
         return len(self.queue) > 0 or self.current_index < len(self.data)
 
 def main():
-    nav_queue = NavigationQueue(navigation_priorities)
+    nav_queue = NavigationQueue()
+    
     try:
-        while True:
+        while True:           
             if not nav_queue.process_queue():
                 print("\nNo more scenarios to process")
                 break
-            time.sleep(0.5)  # Small pause between queue processing cycles
+            time.sleep(0.5)
+            
     except KeyboardInterrupt:
         print("\nStopped by user")
 
