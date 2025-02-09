@@ -1,7 +1,9 @@
 # iAssist 👁️
 
 ## overview
-iAssist is an ai-powered vision assistant designed to provide real-time navigation for visually impaired individuals
+> iAssist is an ai-powered vision assistant designed to provide real-time navigation for visually impaired individuals
+
+![Image](https://github.com/user-attachments/assets/99750507-600b-45f8-a779-f43d26903a82)
 
 ## 🚀 key features
 - **real-time object detection**: instant obstacle recognition and path guidance
