@@ -1,8 +1,12 @@
+import cv2
+import time
+from ultralytics.utils.plotting import Annotator, colors
 from .imports import *
 from .scene import Scene
 
 def main():
-    cap = cv2.VideoCapture(0) #shium 0
+    cap = cv2.VideoCapture(0) # iphone 0 mac 1
+    time.sleep(2)
     if not cap.isOpened():
         print("Error: Camera not accessible")
         return
@@ -36,15 +40,32 @@ def main():
                 print("[Scene]", guidance)
                 scene.speak_guidance(guidance)
                 scene.last_seen = current_time
+                
+                # Add annotation to the frame
+                annotator = Annotator(frame, line_width=2)
+                for obj in scene.tracked_objects.values():
+                    # Convert normalized coordinates back to pixel coordinates
+                    x = int(obj.position[0] * frame.shape[1])
+                    y = int(obj.position[1] * frame.shape[0])
+                    w = int(obj.size[0] * frame.shape[1])
+                    h = int(obj.size[1] * frame.shape[0])
+                    bbox = [x-w//2, y-h//2, x+w//2, y+h//2]  # Convert to xyxy format
+                    
+                    color = colors(obj.object_id, True)
+                    annotator.box_label(
+                        bbox,
+                        f"{obj.class_name} {obj.object_id}",
+                        color=color
+                    )
+                frame = annotator.result()
  
             cv2.imshow("Camera", frame)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
  
     finally:
-        # scene.speech.stop()
         cap.release()
         cv2.destroyAllWindows()
- 
+
 if __name__ == "__main__":
     main()

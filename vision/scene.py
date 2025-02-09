@@ -24,29 +24,38 @@ class Scene:
     def _detect_objects(self, frames: List[np.ndarray], timestamps: List[float]) -> List[DetectedObject]:
         detections = []
         for frame, timestamp in zip(frames, timestamps):
-            results = self.model.predict(frame, conf=0.5)[0]
-            if not hasattr(results, "boxes") or results.boxes is None:
+            results = self.model.track(frame, persist=True)[0]
+            
+            if not hasattr(results.boxes, "id") or results.boxes.id is None:
                 continue
-            for box, conf, cls in zip(results.boxes.xyxy, results.boxes.conf, results.boxes.cls):
+                
+            boxes = results.boxes
+            for box, track_id, conf, cls in zip(
+                boxes.xyxy,
+                boxes.id,
+                boxes.conf,
+                boxes.cls
+            ):
                 x1, y1, x2, y2 = box.tolist()
                 class_name = self.model.names[int(cls)]
-
-                center_x = ((x1 + x2) / 2) / frame.shape[1]
-                center_y = ((y1 + y2) / 2) / frame.shape[0]
-                width = (x2 - x1) / frame.shape[1]
-                height = (y2 - y1) / frame.shape[0]
-
+                
+                # Keep raw pixel coordinates for position
+                center_x = (x1 + x2) / 2  
+                center_y = (y1 + y2) / 2
+                width = x2 - x1
+                height = y2 - y1
+                
                 curr_obj = DetectedObject(
-                    object_id=1,
+                    object_id=int(track_id),
                     class_name=class_name,
                     confidence=float(conf),
                     position=(center_x, center_y),
                     size=(width, height),
                     last_seen=timestamp
                 )
-
                 detections.append(curr_obj)
-                return detections
+                
+        return detections
             
     def _update_memory(self, new_detections: List[DetectedObject]):
         curr_time = time.time()
@@ -78,9 +87,7 @@ class Scene:
     def _classify_scene(self) -> Dict:
         scene_description = {
             "static_objects": [],
-            "moving_objects": [],
-            "potential_hazards": [],
-            "cues": []
+            "moving_objects": []
         }
 
         for obj in self.tracked_objects.values():
@@ -102,14 +109,14 @@ class Scene:
     def _get_position_description(self, pos: Tuple[float, float]) -> str:
         x, y = pos
         horizontal = "center"
-        if x < 0.33:
+        if x < 213:  # 640/3 for left third
             horizontal = "left"
-        elif x > 0.66:
+        elif x > 426:  # 640*2/3 for right third
             horizontal = "right"
         depth = "at medium distance"
-        if y < 0.33:
+        if y < 160:  # 480/3 for far third
             depth = "far ahead"
-        elif y > 0.66:
+        elif y > 320:  # 480*2/3 for near third
             depth = "nearby"
         return f"{horizontal} side, {depth}"
  
@@ -126,6 +133,8 @@ class Scene:
         speed_desc = "quickly" if speed > 0.3 else "slowly"
         return f"moving {speed_desc} {' and '.join(directions)}"
     
+    '''
+    
     def _generate_guidance(self, scene_description: Dict) -> str:
         context = (
             "Scene Analysis:\n"
@@ -140,33 +149,66 @@ class Scene:
             )
         )
         prompt = (
-            f"Your name is iAssist. You are a virtual assistant meant to help visually-impaired individuals navigate their surroundings more comfortably.\n\n"
-            f"You can only name and use objects detected in the context below. Do not make any assumptions or hallucinate details that are not present in the scene context.\n"
-            f"CONTEXT:\n\n"
-            f"{context}\n\n"
-            f"END CONTEXT\n\n"
-            f"REMEMBER that this is one-way communication, so don't say anything like 'do you see the' or 'can you go to the'.\n"
-            f"Based solely on the provided scene analysis above, generate immediate navigation guidance.\n"
-            f"1. Provide immediate safety warnings and directions, if applicable (if not, don't say anything).\n"
-            f"2. If there is nothing there, or nothing that will impair the individual, just stay silent or say 'nothing in the way'.\n"
-            f"3. Be EXTREMELY concise. 1-2 sentences max. Just talk about objects, don't describe surroundings too much.\n"
-            f"4. Do not recommend unnecessary actions, such as moving towards another individual, unless it is crucial for safety.\n"
-            f"5. Do not ask follow-up questions or request additional scene information. Do not hallucinate any details not present in the scene context.\n"
-            f"Keep the response concise and suitable for text-to-speech.\n"
+            "You are a safety-critical navigation assistant for visually impaired users. "
+            "Respond ONLY to explicitly detected objects from sensor data using this format:\n\n"
+
+            "PRIORITY TIERS:\n"
+            "[EMERGENCY] Immediate collision risk (3+ alarms):\n"
+            "- Vehicle/person moving >15mph toward user\n"
+            "- Fire/explosion within 10m\n"
+            "- Falling objects overhead\n\n"
+
+            "[HIGH] Path obstruction (2+ confirmations):\n"
+            "- Solid object in 1m path\n"
+            "- Moving obstacle (<5m closing distance)\n"
+            "- Unmarked elevation change\n\n"
+
+            "[LOW] All other verified objects:\n"
+            "- Static objects\n"
+            "- Ambient info\n"
+            "- Clear paths\n\n"
+
+            "STRICT PROTOCOLS:\n"
+            "1. REJECT non-detected objects - NO INFERENCE\n"
+            "2. Use ONLY 'you'/'your' directives\n"
+            "3. Responses <12 words\n"
+            "4. If uncertain: '[LOW] Path requires verification'\n"
+            "5. NO QUESTIONS - ONLY STATEMENTS\n\n"
+
+            "TERMINATION TRIGGERS:\n"
+            "- Any mention of undetected objects\n"
+            "- Probability words (maybe, possibly)\n"
+            "- Any questioning or asking for input\n"
+            "- Non-safety information\n\n"
+
+            "FORMAT EXAMPLES:\n"
+            "[EMERGENCY] Bus accelerating toward you - Move left NOW\n"
+            "[HIGH] Construction barrier 2m ahead - Turn right\n"
+            "[LOW] Trash can 1m to your right\n"
+            "[LOW] Path clear\n\n"
+
+            "COMPLIANCE ORDER:\n"
+            "If scene data contains:\n"
+            "- 0 objects → '[LOW] Path clear'\n"
+            "- Unconfirmed detections → '[LOW] Path requires verification'\n"
+            "- Emergency triggers → Immediate action command\n"
+            "- Protocol violation → Reject input"
         )
         try:
-            # Use the mistral model (or adjust as needed)
             response = self.llm.generate(model="llama3.2:3b", prompt=prompt)
+            # Verify response format
+            if not any(level in response.response for level in ["[EMERGENCY]", "[HIGH]", "[LOW]"]):
+                # If response doesn't contain priority level, prepend with LOW
+                return f"[LOW] {response.response}"
             return response.response
         except Exception as e:
             print(f"[LLM] Error: {e}")
             return self._generate_fallback_guidance(scene_description)
+    
+    '''
  
-    def _generate_fallback_guidance(self, scene_description: Dict) -> str:
+    def _generate_guidance(self, scene_description: Dict) -> str:
         guidance = []
-        if scene_description["potential_hazards"]:
-            hazards = [f"{h['type']} {h.get('reason', '')}" for h in scene_description["potential_hazards"]]
-            guidance.append(f"Caution: {', '.join(hazards)}")
         if scene_description["moving_objects"]:
             moving = [f"{m['type']} {m['movement']}" for m in scene_description["moving_objects"]]
             guidance.append(f"Movement detected: {', '.join(moving)}")
