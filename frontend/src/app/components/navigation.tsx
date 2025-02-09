@@ -32,7 +32,7 @@ export const Navigation = () => {
                         <Link href="/" className="flex items-center gap-2">
                             {mounted && (
                                 <Image
-                                    src={theme === 'dark' ? '/logo/logo_dark.png' : '/logo/logo_light.png'}
+                                    src={theme === 'dark' ? '/logo/logo_dark.png' : '/logo/logo_dark.png'}
                                     alt="iAssist Logo"
                                     width={80}
                                     height={80}

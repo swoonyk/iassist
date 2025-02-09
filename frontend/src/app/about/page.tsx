@@ -20,6 +20,14 @@ export default function AboutPage() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="relative rounded-xl overflow-hidden shadow-2xl">
             <div className="aspect-[16/9] bg-gradient-to-r from-blue-500 via-indigo-500 to-indigo-600 flex items-center justify-center p-8">
+              <Image 
+                src="/pictures/demo.jpg" 
+                alt="iAssist Demo" 
+                className="object-cover w-full h-full rounded-lg" 
+                width={800} 
+                height={800}
+                priority 
+              />
             </div>
           </div>
 
