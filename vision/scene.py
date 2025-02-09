@@ -127,9 +127,7 @@ class Scene:
             else:
                 for pos in positions[obj_type]:
                     summary_parts.append(f"{obj_type} on {pos}")
-                    
         return "[LOW] " + ", ".join(summary_parts) if summary_parts else "[LOW] Path clear"
-    
     
     def find_tag(self, response: str) -> str:
         """Find and return the highest-priority tag in the response."""
@@ -209,4 +207,3 @@ class Scene:
         
         # Return format matching NavigationQueue's expected input
         return (first_sentence, priority_map.get(tag, 1))
-
