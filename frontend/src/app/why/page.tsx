@@ -138,7 +138,7 @@ export default function WhyPage() {
               </p>
               <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-purple-500/20 rounded-lg p-6">
                 <p className="text-slate-700 dark:text-slate-200 font-medium italic">
-                  "Our mission aligns with the UN's vision of a world where visual impairments no longer limit an individual's ability to live independently and participate fully in society." - Shium
+                  "Our mission aligns with the UN's vision of a world where visual impairments no longer limit an individual's ability to live independently and participate fully in society." - the iAssist Team
                 </p>
               </div>
             </CardContent>
