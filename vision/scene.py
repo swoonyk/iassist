@@ -247,3 +247,22 @@ class Scene:
         except Exception as e:
             print(f"[LLM] Error: {e}")
             return "[LOW] Path is clear"
+    
+    def _format_for_priority_queue(self, response: str, tag: str) -> Tuple[str, int]:
+        priority_map = {
+            "[EMERGENCY]": 3,  # Urgent
+            "[HIGH]": 2,      # Important
+            "[LOW]": 1        # Info
+        }
+        
+        # Clean up the response by removing tags
+        clean_response = response
+        for t in ["[EMERGENCY]", "[HIGH]", "[LOW]"]:
+            clean_response = clean_response.replace(t, "").strip()
+        
+        # Extract first sentence for conciseness
+        first_sentence = clean_response.split('.')[0].strip()
+        
+        # Return format matching NavigationQueue's expected input
+        return (first_sentence, priority_map.get(tag, 1))
+
