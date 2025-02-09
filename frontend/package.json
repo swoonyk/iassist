@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "python-server": "cd ../server && rm -rf ../venv && python3 -m venv ../venv && source ../venv/bin/activate && pip install --upgrade pip && pip install numpy==2.0.0 && pip install torch==2.1.0 && pip install opencv-python==4.8.1.78 flask-cors==4.0.0 && pip install ultralytics==8.0.196 && pip install -r ../requirements.txt && python3 server.py",
+    "python-server": "cd ../server && python3 server.py",
     "dev:all": "concurrently \"npm run dev\" \"npm run python-server\""
   },
   "dependencies": {

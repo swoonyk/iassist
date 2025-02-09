@@ -21,6 +21,7 @@ export function HomePage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [environmentMessages, setEnvironmentMessages] = useState<string[]>([]);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [isCameraStarted, setIsCameraStarted] = useState(false);
 
   useEffect(() => {
     fetch('http://localhost:5003/api/environment-messages')
@@ -104,27 +105,53 @@ export function HomePage() {
         </header>
       </div>
 
-      <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <section className="w-full space-y-8">
-          <article className="relative">
-            <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground">
-              <CameraStream />
+      <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+        {/* Camera Box */}
+        <div className="w-full p-8 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm rounded-xl shadow-xl border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
             </div>
-          </article>
-
-          <article className="w-full space-y-4">
-            <header className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Live Captions</h2>
-              <div className="flex items-center gap-3 bg-white dark:bg-slate-700 px-4 py-2 rounded-full shadow-sm">
-                <span className="text-sm font-medium">
-                  Status: {isRecording ? 'Active' : 'Inactive'}
-                </span>
-                <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Live Camera</h2>
+          </div>
+          <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground overflow-hidden">
+            {isCameraStarted ? (
+              <CameraStream />
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+                <Button 
+                  onClick={() => setIsCameraStarted(true)}
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg"
+                >
+                  Start Camera
+                </Button>
               </div>
-            </header>
+            )}
+          </div>
+        </div>
 
+        {/* Live Actions Box */}
+        <div className="w-full p-8 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm rounded-xl shadow-xl border border-slate-200 dark:border-slate-800">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Live Actions</h2>
+            </div>
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-700 px-4 py-2 rounded-full shadow-sm">
+              <span className="text-sm font-medium">
+                Status: {isRecording ? 'Active' : 'Inactive'}
+              </span>
+              <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+            </div>
+          </div>
+
+          <div className="space-y-6">
             <div 
-              className="h-[200px] w-full bg-muted rounded-lg p-4 overflow-y-auto space-y-2"
+              className="h-[300px] w-full bg-muted rounded-lg p-4 overflow-y-auto space-y-2 border border-slate-200 dark:border-slate-700"
               role="log"
               aria-live="polite"
               aria-label="Detection captions"
@@ -145,22 +172,20 @@ export function HomePage() {
                 </div>
               ))}
             </div>
-          </article>
-        </section>
 
-        <footer className="w-full flex flex-col gap-4 py-4">
-          <div className="flex justify-center gap-4">
-            <Button 
-              size="lg" 
-              variant={isRecording ? "destructive" : "default"}
-              onClick={() => setIsRecording(!isRecording)}
-              aria-pressed={isRecording}
-              className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
-            >
-              {isRecording ? "Stop Detection" : "Start Detection"}
-            </Button>
+            <div className="flex justify-center pt-4">
+              <Button 
+                size="lg" 
+                variant={isRecording ? "destructive" : "default"}
+                onClick={() => setIsRecording(!isRecording)}
+                aria-pressed={isRecording}
+                className="px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                {isRecording ? "Stop Detection" : "Start Detection"}
+              </Button>
+            </div>
           </div>
-        </footer>
+        </div>
       </div>
     </main>
   );
