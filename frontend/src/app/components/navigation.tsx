@@ -10,14 +10,14 @@ export const Navigation = () => {
     const navItems = [
         { href: "/", label: "Home" },
         { href: "/about", label: "About" },
-        { href: "/analytics", label: "Usage Stats" },
-        { href: "/map", label: "Support Map" },
+        { href: "/user-stats", label: "User Stats" },
+        { href: "/support", label: "Customer Support" },
     ];
 
     return (
         <div className="flex h-14 items-center justify-between">
             <div className="flex items-center gap-6 md:gap-10">
-                <Link href="/" className="font-semibold text-lg">
+                <Link href="/" className="font-semibold text-2xl px-2">
                     iAssist
                 </Link>
                 <nav className="flex gap-8">
