@@ -7,7 +7,7 @@ export function processMessages(
   rawMessages: { message: string }[],
   config: MessageProcessorConfig = { minLength: 40, maxLength: 80 }
 ): string[] {
-  let splitMessages = rawMessages
+  const splitMessages = rawMessages
     .map(item => item.message
       .split('.')
       .map(msg => msg.trim())
@@ -18,7 +18,7 @@ export function processMessages(
   const processedMessages: string[] = [];
   let currentMessage = '';
 
-  for (let msg of splitMessages) {
+  for (const msg of splitMessages) {
     if (currentMessage) {
       const combined = currentMessage + '. ' + msg;
       if (combined.length <= config.maxLength) {

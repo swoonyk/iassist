@@ -71,7 +71,7 @@ export function HomePage() {
         clearInterval(interval);
       }
     };
-  }, [isRecording, environmentMessages, currentMessageIndex]);
+  }, [isRecording, environmentMessages, currentMessageIndex, handleNewData]);
 
   return (
     <main className="flex flex-col items-center space-y-8 w-full max-w-5xl mx-auto">
