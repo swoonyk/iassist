@@ -2,7 +2,7 @@ from .imports import *
 from .scene import Scene
 
 def main():
-    cap = cv2.VideoCapture(0) #shium 0
+    cap = cv2.VideoCapture(1) #shium 0
     if not cap.isOpened():
         print("Error: Camera not accessible")
         return
