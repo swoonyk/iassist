@@ -34,7 +34,13 @@ export default function AboutPage() {
           {/* Shium */}
           <div className="text-center">
             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-              <span className="text-4xl">👤</span>
+            <Image
+                src="/team/shium.png"
+                alt="Shium Mashud"
+                width={128}
+                height={128}
+                className="object-cover w-full h-full"
+              />
             </div>
             <h3 className="text-xl font-semibold mb-2">Shium Mashud</h3>
             <p className="text-muted-foreground mb-2">Backend/AI Modeling</p>
@@ -54,7 +60,13 @@ export default function AboutPage() {
           {/* Soonwho */}
           <div className="text-center">
             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-              <span className="text-4xl">👤</span>
+            <Image
+                src="/team/Soonwoo.png"
+                alt="Soonwoo Kwon"
+                width={128}
+                height={128}
+                className="object-cover w-full h-full"
+              />
             </div>
             <h3 className="text-xl font-semibold mb-2">Soonwoo Kwon</h3>
             <p className="text-muted-foreground mb-2">Backend/AI Modeling</p>
@@ -76,7 +88,7 @@ export default function AboutPage() {
           <div className="text-center">
             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700">
               <Image
-                src="/team/richard.png"
+                src="/team/Richard.png"
                 alt="Richard Li"
                 width={128}
                 height={128}
@@ -101,7 +113,13 @@ export default function AboutPage() {
           {/* Annie */}
           <div className="text-center">
             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-              <span className="text-4xl">👤</span>
+            <Image
+                src="/team/Annie.png"
+                alt="Annie Dong"
+                width={128}
+                height={128}
+                className="object-cover w-full h-full"
+              />
             </div>
             <h3 className="text-xl font-semibold mb-2">Annie Dong</h3>
             <p className="text-muted-foreground mb-2">Backend</p>
