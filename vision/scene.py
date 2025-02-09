@@ -2,25 +2,49 @@ from .imports import *
 from .detected_obj import DetectedObject
     
 class Scene:
-    def __init__(self, memory_duration=5.0):
-        self.model = YOLO("yolov8n-seg.pt")
+    def __init__(self):
+        load_dotenv()
+        self.model = YOLO("yolov8n.pt")
+        self.tracked_objects = {}
         self.llm = ollama.Client()
-        self.memory_duration = memory_duration
-        self.tracked_objects: Dict[int, DetectedObject] = {}
-        self.next_object_id = 0
+        self.memory_buffer = deque(maxlen=5)
         self.last_seen = time.time()
 
-    def _same_object(self, initial: Tuple[float, float, float, float], final: Tuple[float,float,float,float]) -> float:
-        x1 = max(initial[0], final[0])
-        y1 = max(initial[1], final[1])
-        x2 = min(initial[2], final[2])
-        y2 = min(initial[3], final[3])
-        intersection = max(0, x2 - x1) * max(0, y2 - y1)
-        area1 = (initial[2] - initial[0]) * (initial[3] - initial[1])
-        area2 = (final[2] - final[0]) * (final[3] - final[1])  
-        union = area1 + area2 - intersection
-        return intersection / union if union else 0
+        if not os.getenv("GROQ_API_KEY"):
+            raise ValueError("GROQ_API_KEY not found in environment variables")
+
+    def _format_memory(self) -> str:
+        """Format memory buffer into context"""
+        if not self.memory_buffer:
+            return "No previous context."
+        
+        timestamps = []
+        summaries = []
+        for timestamp, summary in self.memory_buffer:
+            time_ago = round(time.time() - timestamp, 1)
+            timestamps.append(f"{time_ago}s ago")
+            summaries.append(summary)
+            
+        return "\n".join([
+            f"[{t}]: {s}" for t, s in zip(timestamps, summaries)
+        ])
     
+    def _get_position(self, x: float, y: float) -> str:
+        """Convert coordinates to position description"""
+        horizontal = "center"
+        if x < 213:  # Left third
+            horizontal = "left"
+        elif x > 426:  # Right third
+            horizontal = "right"
+        return horizontal
+
+    def _get_movement_direction(self, dx: float, dy: float) -> str:
+        """Convert position changes to movement direction"""
+        if abs(dx) > abs(dy):
+            return "right" if dx > 150 else "left"
+        else:
+            return "down" if dy > 150 else "up"
+
     def _detect_objects(self, frames: List[np.ndarray], timestamps: List[float]) -> List[DetectedObject]:
         detections = []
         for frame, timestamp in zip(frames, timestamps):
@@ -39,8 +63,7 @@ class Scene:
                 x1, y1, x2, y2 = box.tolist()
                 class_name = self.model.names[int(cls)]
                 
-                # Keep raw pixel coordinates for position
-                center_x = (x1 + x2) / 2  
+                center_x = (x1 + x2) / 2
                 center_y = (y1 + y2) / 2
                 width = x2 - x1
                 height = y2 - y1
@@ -54,176 +77,173 @@ class Scene:
                     last_seen=timestamp
                 )
                 detections.append(curr_obj)
-                
         return detections
-            
-    def _update_memory(self, new_detections: List[DetectedObject]):
-        curr_time = time.time()
-        updated_objects: Dict[int, DetectedObject] = {}
 
-        for obj_id, obj in self.tracked_objects.items():
-            if curr_time - obj.last_seen <= self.memory_duration:
-                updated_objects[obj_id] = obj
+    def annotate_frame(self, frame: np.ndarray) -> np.ndarray:
+        """Draw bounding boxes and labels on frame"""
+        annotated = frame.copy()
+        detections = self._detect_objects([frame], [time.time()])
         
-        for new_obj in new_detections:
-            matched = False
-            new_pos = new_obj.get_position()
-            for obj_id, tracked_obj in updated_objects.items():
-                if tracked_obj.class_name != new_obj.class_name:
-                    continue
-                if self._same_object(new_pos, tracked_obj.get_position()) > 0.3:
-                    tracked_obj.last_seen = new_obj.last_seen
-                    tracked_obj.frequency += 1
-                    matched = True
-                    break
+        for det in detections:
+            x, y = det.position
+            w, h = det.size
+            x1, y1 = int(x - w/2), int(y - h/2)
+            x2, y2 = int(x + w/2), int(y + h/2)
             
-            if not matched:
-                new_obj.object_id = self.next_object_id
-                self.next_object_id += 1
-                updated_objects[new_obj.object_id] = new_obj
+            # Draw box
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            
+            # Add label
+            label = f"{det.class_name} ({det.confidence:.2f})"
+            cv2.putText(annotated, label, (x1, y1-10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
-        self.tracked_objects = updated_objects
+        return annotated
+        
+    def process_movement(self, tracking_buffer):
+        """Process recent frames to detect significant movement and provide clear guidance"""
+        if len(tracking_buffer) < 4:
+            return None
+                
+        prev_frame, prev_time = tracking_buffer[-4]
+        curr_frame, curr_time = tracking_buffer[-1]
+        
+        prev_detections = self._detect_objects([prev_frame], [prev_time])
+        curr_detections = self._detect_objects([curr_frame], [curr_time])
+        
+        # Track movements by object type
+        movements = defaultdict(lambda: {'count': 0, 'direction': '', 'speed': 0})
+        
+        for curr in curr_detections:
+            for prev in prev_detections:
+                if curr.object_id == prev.object_id:
+                    dx = curr.position[0] - prev.position[0]
+                    dy = curr.position[1] - prev.position[1]
+                    
+                    if abs(dx) > 250 or abs(dy) > 250:  # Significant movement threshold
+                        speed = np.sqrt(dx*dx + dy*dy)
+                        direction = self._get_movement_direction(dx, dy)
+                        
+                        obj_type = curr.class_name
+                        movements[obj_type]['count'] += 1
+                        movements[obj_type]['direction'] = direction
+                        movements[obj_type]['speed'] = max(movements[obj_type]['speed'], speed)
+        
+        # Generate movement summary
+        if not movements:
+            return None
+            
+        summary_parts = []
+        guidance = []
+        
+        for obj_type, data in movements.items():
+            count = data['count']
+            direction = data['direction']
+            speed = data['speed']
+            
+            # Add movement description
+            if count > 1:
+                summary_parts.append(f"{count} {obj_type}s moving {direction}")
+            else:
+                summary_parts.append(f"{obj_type} moving {direction}")
+                
+            # Add guidance for fast moving objects
+            if speed > 175:  # Adjust threshold as needed
+                opposite_direction = "right" if direction == "left" else "left" if direction == "right" else "back" if direction == "up" else "forward"
+                guidance.append(f"move {opposite_direction} to avoid {obj_type}")
+        
+        summary = ", ".join(summary_parts)
+        if guidance:
+            summary += " - " + ", ".join(guidance)
+            return f"[HIGH] {summary}"
+        return f"[LOW] {summary}"
 
-    def _classify_scene(self) -> Dict:
-        scene_description = {
-            "static_objects": [],
-            "moving_objects": []
+    def summarize_scene(self, analysis_buffer) -> str:
+        """Generate detailed scene summary from buffer"""
+        if not analysis_buffer:
+            return "[LOW] No data available"
+            
+        latest_frame, _ = analysis_buffer[-1]
+        detections = self._detect_objects([latest_frame], [time.time()])
+        
+        # Count objects and track positions
+        counts = defaultdict(int)
+        positions = defaultdict(list)
+        
+        for det in detections:
+            counts[det.class_name] += 1
+            pos = self._get_position(det.position[0], det.position[1])
+            positions[det.class_name].append(pos)
+        
+        # Build summary
+        summary_parts = []
+        for obj_type, count in counts.items():
+            if count > 2:
+                summary_parts.append(f"{count} {obj_type}s")
+            else:
+                for pos in positions[obj_type]:
+                    summary_parts.append(f"{obj_type} on {pos}")
+                    
+        return "[LOW] " + ", ".join(summary_parts) if summary_parts else "[LOW] Path clear"
+    
+    
+    def find_tag(self, response: str) -> str:
+        """Find and return the highest-priority tag in the response."""
+        priority = ["[EMERGENCY]", "[HIGH]", "[LOW]"]  # Highest to lowest priority
+        
+        for tag in priority:
+            if re.search(re.escape(tag), response):  # Direct search instead of list
+                return tag
+
+        return "[LOW]"  # Default to lowest priority
+    
+    def llm_summarize(self, analysis_buffer) -> str:
+        if not analysis_buffer:
+            return "[LOW] No data available"
+            
+        scene_summary = self.summarize_scene(analysis_buffer)
+        memory_context = self._format_memory()
+
+        context = {
+            "previous_observations": memory_context,
+            "current_scene": scene_summary
         }
 
-        for obj in self.tracked_objects.values():
-            movement_speed = np.linalg.norm(obj.movement)
-            if movement_speed < 0.1 and obj.frequency > 2:
-                scene_description["static_objects"].append({
-                    "type": obj.class_name,
-                    "position": self._get_position_description(obj.position),
-                    "size": "large" if ((obj.size[0] * obj.size[1]) > 0.1) else "small"
-                })
-            elif movement_speed >= 0.1:
-                movement_desc = self._get_movement_description(obj.movement)
-                scene_description["moving_objects"].append({
-                    "type": obj.class_name,
-                    "movement": movement_desc
-                })
-        return scene_description
-    
-    def _get_position_description(self, pos: Tuple[float, float]) -> str:
-        x, y = pos
-        horizontal = "center"
-        if x < 213:  # 640/3 for left third
-            horizontal = "left"
-        elif x > 426:  # 640*2/3 for right third
-            horizontal = "right"
-        depth = "at medium distance"
-        if y < 160:  # 480/3 for far third
-            depth = "far ahead"
-        elif y > 320:  # 480*2/3 for near third
-            depth = "nearby"
-        return f"{horizontal} side, {depth}"
- 
-    def _get_movement_description(self, movement: Tuple[float, float]) -> str:
-        dx, dy = movement
-        speed = np.linalg.norm(movement)
-        if speed < 0.1:
-            return "stationary"
-        directions = []
-        if abs(dx) > 0.1:
-            directions.append("right" if dx > 0 else "left")
-        if abs(dy) > 0.1:
-            directions.append("closer" if dy > 0 else "away")
-        speed_desc = "quickly" if speed > 0.3 else "slowly"
-        return f"moving {speed_desc} {' and '.join(directions)}"
-    
-    '''
-    
-    def _generate_guidance(self, scene_description: Dict) -> str:
-        context = (
-            "Scene Analysis:\n"
-            "- Static Objects: {}\n".format(
-                ', '.join("{} ({})".format(obj['type'], obj['position']) for obj in scene_description['static_objects'])
-            ) +
-            "- Moving Objects: {}\n".format(
-                ', '.join("{} {}".format(obj['type'], obj['movement']) for obj in scene_description['moving_objects'])
-            ) +
-            "- Hazards: {}".format(
-                ', '.join("{} ({})".format(obj['type'], obj.get('reason', 'unknown')) for obj in scene_description['potential_hazards'])
-            )
-        )
         prompt = (
-            "You are a safety-critical navigation assistant for visually impaired users. "
-            "Respond ONLY to explicitly detected objects from sensor data using this format:\n\n"
-
-            "PRIORITY TIERS:\n"
-            "[EMERGENCY] Immediate collision risk (3+ alarms):\n"
-            "- Vehicle/person moving >15mph toward user\n"
-            "- Fire/explosion within 10m\n"
-            "- Falling objects overhead\n\n"
-
-            "[HIGH] Path obstruction (2+ confirmations):\n"
-            "- Solid object in 1m path\n"
-            "- Moving obstacle (<5m closing distance)\n"
-            "- Unmarked elevation change\n\n"
-
-            "[LOW] All other verified objects:\n"
-            "- Static objects\n"
-            "- Ambient info\n"
-            "- Clear paths\n\n"
-
-            "STRICT PROTOCOLS:\n"
-            "1. REJECT non-detected objects - NO INFERENCE\n"
-            "2. Use ONLY 'you'/'your' directives\n"
-            "3. Responses <12 words\n"
-            "4. If uncertain: '[LOW] Path requires verification'\n"
-            "5. NO QUESTIONS - ONLY STATEMENTS\n\n"
-
-            "TERMINATION TRIGGERS:\n"
-            "- Any mention of undetected objects\n"
-            "- Probability words (maybe, possibly)\n"
-            "- Any questioning or asking for input\n"
-            "- Non-safety information\n\n"
-
-            "FORMAT EXAMPLES:\n"
-            "[EMERGENCY] Bus accelerating toward you - Move left NOW\n"
-            "[HIGH] Construction barrier 2m ahead - Turn right\n"
-            "[LOW] Trash can 1m to your right\n"
-            "[LOW] Path clear\n\n"
-
-            "COMPLIANCE ORDER:\n"
-            "If scene data contains:\n"
-            "- 0 objects → '[LOW] Path clear'\n"
-            "- Unconfirmed detections → '[LOW] Path requires verification'\n"
-            "- Emergency triggers → Immediate action command\n"
-            "- Protocol violation → Reject input"
+            f'''You are iAssist, a virtual assistant helping navigate surroundings.\n'''
+            f'''Previous observations:\n{context["previous_observations"]}\n'''
+            f'''Current scene: {context["current_scene"]}\n'''
+            f'''Provide a concise (1-3 sentences) summary comparing current and previous scenes.\n'''
+            f'''Include position-based guidance only if objects pose potential risks.\n'''
+            f'''Use appropriate tags:\n'''
+            f'''[EMERGENCY] - Immediate danger\n'''
+            f'''[HIGH] - Caution needed\n'''
+            f'''[LOW] - Normal situation\n'''
         )
+        
+
+        client = Groq(
+            api_key=os.environ.get("GROQ_API_KEY"),
+        )
+
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    'role': 'user',
+                    'content': prompt
+                }
+            ],
+            model="llama-3.2-3b-preview"
+        )
+
         try:
-            response = self.llm.generate(model="llama3.2:3b", prompt=prompt)
-            # Verify response format
-            if not any(level in response.response for level in ["[EMERGENCY]", "[HIGH]", "[LOW]"]):
-                # If response doesn't contain priority level, prepend with LOW
-                return f"[LOW] {response.response}"
-            return response.response
+            response = chat_completion.choices[0].message.content.strip()
+            tag = self.find_tag(response)
+                
+            # Store in memory buffer
+            self.memory_buffer.append((time.time(), scene_summary))
+            
+            return response, tag
         except Exception as e:
             print(f"[LLM] Error: {e}")
-            return self._generate_fallback_guidance(scene_description)
-    
-    '''
- 
-    def _generate_guidance(self, scene_description: Dict) -> str:
-        guidance = []
-        if scene_description["moving_objects"]:
-            moving = [f"{m['type']} {m['movement']}" for m in scene_description["moving_objects"]]
-            guidance.append(f"Movement detected: {', '.join(moving)}")
-        if scene_description["static_objects"]:
-            static = [f"{s['type']} {s['position']}" for s in scene_description["static_objects"]]
-            guidance.append(f"Surroundings: {', '.join(static)}")
-        return " ".join(guidance)
- 
-    def process_frame_batch(self, frames: List[np.ndarray], timestamps: List[float]) -> str:
-        new_detections = self._detect_objects(frames, timestamps)
-        self._update_memory(new_detections)
-        scene_description = self._classify_scene()
-        guidance = self._generate_guidance(scene_description)
-        return guidance
-    
-    
-    def speak_guidance(self, text: str):
-        print(text)
+            return "[LOW] Path is clear"
