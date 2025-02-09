@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-
+import {AnimatedText} from "@/components/ui/animated-underline-text-one";
 export default function WhyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-zinc-900 dark:to-zinc-950">
@@ -9,9 +9,11 @@ export default function WhyPage() {
         {/* Statistics Section */}
         <div className="space-y-8">
           <div className="text-center space-y-4">
-            <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Why iAssist?
-            </h2>
+            <AnimatedText 
+                text="Why iAssist?"
+                textClassName="text-5xl font-extrabold bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent"
+                underlineClassName="text-blue-500 dark:text-blue-400"
+          />
             <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
               Empowering visually impaired individuals with cutting-edge AI technology for enhanced independence and accessibility.
             </p>

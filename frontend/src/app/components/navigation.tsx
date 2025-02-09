@@ -11,7 +11,6 @@ export const Navigation = () => {
         { href: "/", label: "Home" },
         { href: "/about", label: "About" },
         { href: "/why", label: "Why" },
-        { href: "/support", label: "Customer Support" },
     ];
 
     return (
