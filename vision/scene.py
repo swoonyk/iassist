@@ -172,12 +172,15 @@ class Scene:
             f'''You are iAssist, a virtual assistant helping navigate surroundings.\n'''
             f'''Previous observations:\n{context["previous_observations"]}\n'''
             f'''Current scene: {context["current_scene"]}\n'''
-            f'''Provide a concise (1-3 sentences) summary comparing current and previous scenes.\n'''
+            f'''Provide a concise (10 word maximum) summary about current scene. If needed, compare to previous observations.\n'''
             f'''Include position-based guidance only if objects pose potential risks.\n'''
             f'''Use appropriate tags:\n'''
             f'''[EMERGENCY] - Immediate danger\n'''
             f'''[HIGH] - Caution needed\n'''
             f'''[LOW] - Normal situation\n'''
+            f'''Examples:'''
+            f'''[LOW] 2 bookshelves and a chair to your right.'''
+            f'''[HIGH] Watch out for the wet floor ahead.'''
         )
         
 
