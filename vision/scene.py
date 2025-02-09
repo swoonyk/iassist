@@ -3,31 +3,8 @@ from .detected_obj import DetectedObject
     
 class Scene:
     def __init__(self):
-        load_dotenv()
         self.model = YOLO("yolov8n.pt")
         self.tracked_objects = {}
-        self.llm = ollama.Client()
-        self.memory_buffer = deque(maxlen=5)
-        self.last_seen = time.time()
-
-        if not os.getenv("GROQ_API_KEY"):
-            raise ValueError("GROQ_API_KEY not found in environment variables")
-
-    def _format_memory(self) -> str:
-        """Format memory buffer into context"""
-        if not self.memory_buffer:
-            return "No previous context."
-        
-        timestamps = []
-        summaries = []
-        for timestamp, summary in self.memory_buffer:
-            time_ago = round(time.time() - timestamp, 1)
-            timestamps.append(f"{time_ago}s ago")
-            summaries.append(summary)
-            
-        return "\n".join([
-            f"[{t}]: {s}" for t, s in zip(timestamps, summaries)
-        ])
     
     def _get_position(self, x: float, y: float) -> str:
         """Convert coordinates to position description"""
@@ -41,9 +18,9 @@ class Scene:
     def _get_movement_direction(self, dx: float, dy: float) -> str:
         """Convert position changes to movement direction"""
         if abs(dx) > abs(dy):
-            return "right" if dx > 150 else "left"
+            return "right" if dx > 0 else "left"
         else:
-            return "down" if dy > 150 else "up"
+            return "down" if dy > 0 else "up"
 
     def _detect_objects(self, frames: List[np.ndarray], timestamps: List[float]) -> List[DetectedObject]:
         detections = []
@@ -101,62 +78,29 @@ class Scene:
         return annotated
         
     def process_movement(self, tracking_buffer):
-        """Process recent frames to detect significant movement and provide clear guidance"""
-        if len(tracking_buffer) < 4:
+        """Process recent frames to detect significant movement"""
+        if len(tracking_buffer) < 2:
             return None
-                
-        prev_frame, prev_time = tracking_buffer[-4]
+            
+        # Compare most recent frames
+        prev_frame, prev_time = tracking_buffer[-2]
         curr_frame, curr_time = tracking_buffer[-1]
         
         prev_detections = self._detect_objects([prev_frame], [prev_time])
         curr_detections = self._detect_objects([curr_frame], [curr_time])
         
-        # Track movements by object type
-        movements = defaultdict(lambda: {'count': 0, 'direction': '', 'speed': 0})
-        
+        # Track significant position changes
+        movements = []
         for curr in curr_detections:
             for prev in prev_detections:
                 if curr.object_id == prev.object_id:
                     dx = curr.position[0] - prev.position[0]
                     dy = curr.position[1] - prev.position[1]
-                    
-                    if abs(dx) > 250 or abs(dy) > 250:  # Significant movement threshold
-                        speed = np.sqrt(dx*dx + dy*dy)
+                    if abs(dx) > 50 or abs(dy) > 50:  # Significant movement threshold
                         direction = self._get_movement_direction(dx, dy)
-                        
-                        obj_type = curr.class_name
-                        movements[obj_type]['count'] += 1
-                        movements[obj_type]['direction'] = direction
-                        movements[obj_type]['speed'] = max(movements[obj_type]['speed'], speed)
+                        movements.append(f"{curr.class_name} moving {direction}")
         
-        # Generate movement summary
-        if not movements:
-            return None
-            
-        summary_parts = []
-        guidance = []
-        
-        for obj_type, data in movements.items():
-            count = data['count']
-            direction = data['direction']
-            speed = data['speed']
-            
-            # Add movement description
-            if count > 1:
-                summary_parts.append(f"{count} {obj_type}s moving {direction}")
-            else:
-                summary_parts.append(f"{obj_type} moving {direction}")
-                
-            # Add guidance for fast moving objects
-            if speed > 175:  # Adjust threshold as needed
-                opposite_direction = "right" if direction == "left" else "left" if direction == "right" else "back" if direction == "up" else "forward"
-                guidance.append(f"move {opposite_direction} to avoid {obj_type}")
-        
-        summary = ", ".join(summary_parts)
-        if guidance:
-            summary += " - " + ", ".join(guidance)
-            return f"[HIGH] {summary}"
-        return f"[LOW] {summary}"
+        return ", ".join(movements) if movements else None
 
     def summarize_scene(self, analysis_buffer) -> str:
         """Generate detailed scene summary from buffer"""
@@ -183,9 +127,7 @@ class Scene:
             else:
                 for pos in positions[obj_type]:
                     summary_parts.append(f"{obj_type} on {pos}")
-                    
         return "[LOW] " + ", ".join(summary_parts) if summary_parts else "[LOW] Path clear"
-    
     
     def find_tag(self, response: str) -> str:
         """Find and return the highest-priority tag in the response."""
@@ -265,4 +207,3 @@ class Scene:
         
         # Return format matching NavigationQueue's expected input
         return (first_sentence, priority_map.get(tag, 1))
-
