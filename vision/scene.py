@@ -147,16 +147,29 @@ class Scene:
             f"END CONTEXT\n\n"
             f"REMEMBER that this is one-way communication, so don't say anything like 'do you see the' or 'can you go to the'.\n"
             f"Based solely on the provided scene analysis above, generate immediate navigation guidance.\n"
-            f"1. Provide immediate safety warnings and directions, if applicable (if not, don't say anything).\n"
-            f"2. If there is nothing there, or nothing that will impair the individual, just stay silent or say 'nothing in the way'.\n"
-            f"3. Be EXTREMELY concise. 1-2 sentences max. Just talk about objects, don't describe surroundings too much.\n"
-            f"4. Do not recommend unnecessary actions, such as moving towards another individual, unless it is crucial for safety.\n"
-            f"5. Do not ask follow-up questions or request additional scene information. Do not hallucinate any details not present in the scene context.\n"
-            f"Keep the response concise and suitable for text-to-speech.\n"
+            f"1. First, analyze the situation and assign ONE of these priority levels:\n"
+            f"   EMERGENCY: Immediate danger requiring instant action (e.g., fast moving vehicles, immediate collisions)\n"
+            f"   HIGH: Important but not life-threatening (e.g., obstacles in direct path, people walking nearby)\n"
+            f"   LOW: General information about surroundings (e.g., static objects far away, ambient descriptions)\n"
+            f"2. Format your response EXACTLY like this:\n"
+            f"   [PRIORITY_LEVEL] Your guidance message\n"
+            f"3. Provide immediate safety warnings and directions, if applicable (if not, don't say anything).\n"
+            f"4. If there is nothing there, or nothing that will impair the individual, respond with: [LOW] nothing in the way\n"
+            f"5. Be EXTREMELY concise. 1-2 sentences max. Just talk about objects, don't describe surroundings too much.\n"
+            f"6. Do not recommend unnecessary actions, such as moving towards another individual, unless it is crucial for safety.\n"
+            f"7. Do not ask follow-up questions or request additional scene information. Never hallucinate any details not present in the scene context.\n"
+            f"Keep the response concise and suitable for text-to-speech.\n\n"
+            f"Example responses:\n"
+            f"[EMERGENCY] `message`\n"
+            f"[HIGH] Large table directly ahead, veer left to avoid.\n"
+            f"[LOW] Bookshelf on the far right side.\n"
         )
         try:
-            # Use the mistral model (or adjust as needed)
             response = self.llm.generate(model="llama3.2:3b", prompt=prompt)
+            # Verify response format
+            if not any(level in response.response for level in ["[EMERGENCY]", "[HIGH]", "[LOW]"]):
+                # If response doesn't contain priority level, prepend with LOW
+                return f"[LOW] {response.response}"
             return response.response
         except Exception as e:
             print(f"[LLM] Error: {e}")
