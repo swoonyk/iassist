@@ -3,6 +3,12 @@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { processMessages } from "../lib/message-cutter";
+import Image from 'next/image'
+const CameraStream = dynamic(() => import('./CameraStream').then(mod => mod.CameraStream), {
+  ssr: false,
+  loading: () => <p>Loading camera...</p>
+})
+import dynamic from 'next/dynamic'
 
 interface Message {
   time: string;
@@ -10,21 +16,26 @@ interface Message {
 }
 
 export function HomePage() {
-  const [isRecording, setIsRecording] = useState(false);
+  const [isRecording, setIsRecording] = useState(false)  
   const [messages, setMessages] = useState<Message[]>([]);
   const [environmentMessages, setEnvironmentMessages] = useState<string[]>([]);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
   useEffect(() => {
-    fetch('/mock_data/info.json')
-      .then(response => response.json())
-      .then(data => {
-        if (data.environment) {
-          const messages = processMessages(data.environment);
-          setEnvironmentMessages(messages);
+    fetch('http://localhost:5003/api/environment-messages')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
         }
+        return response.json();
       })
-      .catch(error => console.error('Error loading messages:', error));
+      .then(data => {
+        setEnvironmentMessages(data.messages);
+      })
+      .catch(error => {
+        console.error('Error fetching environment messages:', error);
+        setEnvironmentMessages([]);
+      });
   }, []);
 
   const addMessage = (newMessage: Message) => {
@@ -87,9 +98,7 @@ export function HomePage() {
       <section className="w-full space-y-8">
         <article className="relative">
           <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground">
-            <p className="text-muted-foreground" role="status" aria-live="polite">
-              Camera feed will appear here
-            </p>
+            <CameraStream />
           </div>
         </article>
 
