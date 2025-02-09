@@ -6,7 +6,7 @@ iAssist is an ai-powered vision assistant designed to provide real-time navigati
 ## 🚀 key features
 - **real-time object detection**: instant obstacle recognition and path guidance
 - **priority-based navigation**: employs deque and priority queues to ensure urgent alerts are processed first
-- **bidirectional voice interaction**: combines **text-to-speech (TTS)** and **speech-to-text (STT)** for a hands-free experience via voice commands
+- **voice interaction**: utilizes **text-to-speech (TTS)** for a hands-free experience via audio guidance
 
 ## 💡 inspiration & approach
 traditional navigation aids like guide dogs and specialized devices can be expensive, require training, and aren’t always accessible. iAssist bridges this gap by offering an affordable, AI-driven alternative that runs on a smartphone, reducing financial and logistical barriers
@@ -14,7 +14,6 @@ traditional navigation aids like guide dogs and specialized devices can be expen
 ### core ai components
 - **object detection**: [utralytics yolo11](https://docs.ultralytics.com/models/yolo11/)
 - **audio feedback (TTS)**: [hugging face `Kokoro-82M`](https://huggingface.co/hexgrad/Kokoro-82M)
-- **speech recognition (STT)**: [groq API](https://api.groq.com/openai/v1/audio/translations) [hugging face `whisper-large-v3-turbo`]
 - **ai framework**: [ollama](https://ollama.com/)
 
 ## 🧠 technical architecture
