@@ -1,1 +1,10 @@
 venv/
+.env
+.DS_Store
+__pycache__/
+*.pyc
+.env.local
+.env.*.local
+node_modules/
+.next/
+.iassist-venv/
