@@ -1,0 +1,7 @@
+{
+    "environment": [
+        {
+            "message": "Person detected 2 meters ahead. Door found on the left. Stairs approaching, 5 steps down. Door found on the left. Clear path ahead for 10 meters. Obstacle detected on the right. Wall present on the left side. Open space beyond 7 meters. Small object on the ground, 1 meter ahead. Person moving from right to left, 3 meters ahead. Path narrows to 0.8 meters wide. Handrail detected on the left. Slight incline detected, rising 3 degrees over the next 4 meters. Furniture detected 2 meters ahead, partially blocking the path. Alternative route available on the right. Stairs detected, ascending 6 steps. Open hallway continues for 12 meters. Glass surface detected on the left, possibly a window. Narrow gap ahead, 0.6 meters wide. Open area beyond 5 meters. Slight right turn required to continue. No immediate obstacles ahead for 7 meters. Wall detected on both sides, passage is 1 meter wide. Door found 4 meters ahead on the right. Moving object detected approaching from behind. Floor transitions to carpet in 2 meters."
+        }
+    ]
+}
