@@ -1,0 +1,6 @@
+numpy==2.1.1
+ollama==0.4.7
+opencv_python==4.11.0.86
+opencv_python_headless==4.11.0.86
+Requests==2.32.3
+ultralytics==8.3.73
