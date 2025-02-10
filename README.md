@@ -63,7 +63,7 @@ cd frontend
 npm run dev
 ```
 
-### Option 2: Run Visual Tracking Standalone
+### Option 2: Run Visual Tracking Standalone (IN DEVELOPING)
 If you only want to run the visual tracking system without the web interface:
 
 ```bash
