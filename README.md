@@ -28,13 +28,54 @@ iAssist integrates a combination of computer vision, voice processing, and optim
 ```bash
 # clone the repository
 git clone https://github.com/swoonyk/iassist.git
-# highly recommend using a virtual environment 😉
+
+# create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+
 # install dependencies
 pip install -r requirements.txt
 ```
 ## 🚦 quick start
-```python
-coming soon 🤭
+
+### Option 1: Run Full Web Application
+1. Install dependencies:
+```bash
+# Activate virtual environment if not already active
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+
+# Server dependencies
+pip install -r requirements.txt
+
+# Frontend dependencies
+cd frontend
+npm install
 ```
+
+2. Start the application:
+```bash
+# Start the backend server (in the server directory)
+cd server
+python3 server.py
+
+# In a new terminal, start the frontend (in the frontend directory)
+cd frontend
+npm run dev
+```
+
+### Option 2: Run Visual Tracking Standalone
+If you only want to run the visual tracking system without the web interface:
+
+```bash
+# Activate virtual environment if not already active
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+
+# Run the visual tracking system
+cd vision
+python3 main.py
+```
+
+Note: Make sure your camera is accessible and properly connected when running the visual tracking system.
+
 ---
 **disclaimer**: iAssist is an assistive tool and should not replace professional mobility training. Users should exercise caution while navigating unfamiliar environments
