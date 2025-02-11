@@ -131,7 +131,7 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Live Actions Box */}
+        {/* Live Actions Box
         <div className="w-full p-8 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm rounded-xl shadow-xl border border-slate-200 dark:border-slate-800">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export function HomePage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </main>
   );
